@@ -206,7 +206,13 @@ app.patch("/all-foods/:id", verifyToken, async (req, res) => {
 });
 
 
-
+//delete all food databases
+app.delete("/all-foods/:id", verifyToken, async (req, res) => {
+  const id = req.params.id;
+  const filter = { _id: new ObjectId(id) };
+  const result = await foodCollection.deleteOne(filter);
+  res.send(result);
+});
 
   } finally {
     // Ensures that the client will close when you finish/error
