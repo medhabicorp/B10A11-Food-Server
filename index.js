@@ -15,6 +15,7 @@ app.use(
       origin: [
           "http://localhost:5173",
           "http://localhost:5174",
+          "http://localhost:5175",
       ],
       credentials: true,
   })
@@ -85,6 +86,16 @@ async function run() {
     })
         .send({ success: true })
 });
+
+
+
+//post all add foods
+app.post("/all-foods", verifyToken, async (req, res) => {
+  const foods = req.body;
+  const result = await foodCollection.insertOne(foods);
+  res.send(result);
+});
+
 
   } finally {
     // Ensures that the client will close when you finish/error
