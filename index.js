@@ -20,6 +20,13 @@ app.use(
       credentials: true,
   })
 );
+// app.use(
+//   cors({
+//       origin: "*", // Allow requests from any domain
+//       credentials: true, // Allow sending cookies (if needed)
+//   })
+// );
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -90,35 +97,31 @@ async function run() {
 // get all Foods
 app.get("/all-foods", async (req, res) => {
   const { available, search, sort } = req.query;
-
+  
   let query = {};
-
   if (available) {
     query.status = "Available";
   }
-
   if (search) {
     query.foodName = { $regex: search, $options: "i" };
   }
 
-  try {
-    const foods = await foodCollection.find(query).toArray();
-    if (sort === "asc") {
-      foods.sort((a, b) =>
-        compareAsc(new Date(a.expireDate), new Date(b.expireDate))
-      );
-    } else if (sort === "dsc") {
-      foods.sort((a, b) =>
-        compareDesc(new Date(a.expireDate), new Date(b.expireDate))
-      );
-    }
+  let sortQuery = {};
+  if (sort === "asc") {
+    sortQuery = { expireDate: 1 }; // Ascending order
+  } else if (sort === "dsc") {
+    sortQuery = { expireDate: -1 }; // Descending order
+  }
 
+  try {
+    const foods = await foodCollection.find(query).sort(sortQuery).toArray();
     res.send(foods);
   } catch (error) {
     console.error("Error fetching foods:", error);
     res.status(500).send({ message: "Error fetching foods" });
   }
 });
+
 
 //get all food data from Database
 app.get("/foods", async (req, res) => {
@@ -156,6 +159,18 @@ app.get("/all-foods/:id", verifyToken, async (req, res) => {
   res.send(result);
 });
 
+// manage my foods by login email
+app.get("/manage-my-foods", verifyToken, async (req, res) => {
+  const email = req.query.email;
+  if (req.user.email !== email) {
+    return res.status(403).send({ message: "Forbidden" });
+  }
+  const query = { "donator.donatorEmail": email };
+  const result = await foodCollection.find(query).sort({ _id: -1 }).toArray();
+  res.send(result);
+});
+
+
 //post all add foods
 app.post("/all-foods", verifyToken, async (req, res) => {
   const foods = req.body;
@@ -181,46 +196,7 @@ app.post("/request-foods", verifyToken, async (req, res) => {
 });
 
 
-// manage my foods by login email
-app.get("/manage-my-foods", verifyToken, async (req, res) => {
-  const email = req.query.email;
-  if (req.user.email !== email) {
-    return res.status(403).send({ message: "Forbidden" });
-  }
-  const query = { "donator.donatorEmail": email };
-  const result = await foodCollection.find(query).sort({ _id: -1 }).toArray();
-  res.send(result);
-});
 
-
-app.patch("/all-foods/:id", verifyToken, async (req, res) => {
-  const food = req.body;
-  const id = req.params.id;
-  console.log("updated", id);
-  console.log("verified email", req.user.email);
-  const filter = { _id: new ObjectId(id) };
-  const updateDoc = {
-    $set: {
-      foodName: food.foodName,
-      foodImg: food.foodImg,
-      foodQuantity: food.foodQuantity,
-      location: food.location,
-      expireDate: food.expireDate,
-      additionalNotes: food.additionalNotes,
-    },
-  };
-  const result = await foodCollection.updateOne(filter, updateDoc);
-  res.send(result);
-});
-
-
-//delete all food databases
-app.delete("/all-foods/:id", verifyToken, async (req, res) => {
-  const id = req.params.id;
-  const filter = { _id: new ObjectId(id) };
-  const result = await foodCollection.deleteOne(filter);
-  res.send(result);
-});
 
   } finally {
     // Ensures that the client will close when you finish/error
