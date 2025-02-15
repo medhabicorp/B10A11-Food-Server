@@ -20,12 +20,7 @@ app.use(
       credentials: true,
   })
 );
-// app.use(
-//   cors({
-//       origin: "*", // Allow requests from any domain
-//       credentials: true, // Allow sending cookies (if needed)
-//   })
-// );
+
 
 app.use(express.json());
 app.use(cookieParser());
@@ -192,6 +187,21 @@ app.post("/request-foods", verifyToken, async (req, res) => {
     $set: { status: foodRequest.status },
   };
   const updateResult = await foodCollection.updateOne(filter, updateDoc);
+  res.send(result);
+});
+
+
+app.patch("/all-foods/:id", verifyToken, async (req, res) => {
+  const { foodName, foodImg, foodQuantity, location, expireDate, additionalNotes } = req.body;
+  const id = req.params.id;
+
+  const filter = { _id: new ObjectId(id), "donator.donatorEmail": req.user.email };
+
+  const updateDoc = {
+    $set: { foodName, foodImg, foodQuantity, location, expireDate, additionalNotes },
+  };
+
+  const result = await foodCollection.updateOne(filter, updateDoc);
   res.send(result);
 });
 
